@@ -269,6 +269,25 @@ consider *almost definite* non-goals.
 * Perfectly matching all of the (sometimes quite exotic) garbage collector
   corner case behavior in PUC-Rio Lua.
 
+## Official Lua 5.4 test suite
+
+The official `lua-5.4.9-tests` (MIT, pinned in `tests/lua-5.4-tests/VERSION`)
+are vendored unmodified and run by `cargo test --test lua_suite -- --nocapture`
+(also part of plain `cargo test`). `tests/lua_suite.rs` runs each file in its
+own process and reports `pass`, `fail`, `cannot-load` (does not compile), or
+`skipped` (exits cleanly only because it skips itself without the `ltests` C
+library). The test fails only if the pass count drops below `PASS_FLOOR`.
+
+Measured 2026-10-18, per file (`all.lua`, the suite's own driver, is excluded):
+
+| files | pass | skipped | fail | cannot-load |
+| ----- | ---- | ------- | ---- | ----------- |
+| 32    | 1    | 1       | 22   | 8           |
+
+Only `heavy.lua` passes. Most failures are unimplemented stdlib functions
+(`load`, `string.*`, `math.*`, `table.*`, `os`, `debug`), and the cannot-load
+files hit unsupported `<close>` or lexer gaps. `closure.lua` times out.
+
 ## Why is it called 'piccolo'?
 
 It's a cute little "pico" Lua, get it?

@@ -1,0 +1,5 @@
+lua-5.4.9-tests.tar.gz
+source: https://www.lua.org/tests/lua-5.4.9-tests.tar.gz
+sha256: 7d971845f545ffc09fbb3128a86b2c6524161c70d0fdf0154a16e8c00c343fca
+license: MIT (see LICENSE, copied from the notice at the end of all.lua)
+Vendored unmodified; only LICENSE and VERSION were added.
