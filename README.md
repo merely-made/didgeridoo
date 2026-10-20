@@ -271,6 +271,9 @@ consider *almost definite* non-goals.
 
 ## Official Lua 5.4 test suite
 
+The [Lua 5.4 gap plan](LUA54_GAP_PLAN.md) explains the baseline and orders the
+remaining work, beginning with diagnostics and basic environment behavior.
+
 The official `lua-5.4.9-tests` (MIT, pinned in `tests/lua-5.4-tests/VERSION`)
 are vendored unmodified and run by `cargo test --test lua_suite -- --nocapture`
 (also part of plain `cargo test`). `tests/lua_suite.rs` runs each file in its
