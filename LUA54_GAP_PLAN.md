@@ -15,8 +15,12 @@ globals or reduced snippets provide different evidence from the unmodified run.
 The investigation found six compile failures at unsupported `<close>` variables
 (api, coroutine, cstack, files, goto, locals), and two lexer failures on extended
 UTF-8 escapes (literals, utf8). Several runtime files immediately require debug
-or use absent string functions. `_G` is absent; nextvar reaches roughly line 259
-before its global-environment assertions fail. closure waits for a weak-table
+or use absent string functions. The `utf8` library is absent as a whole, as are
+`loadfile` and `warn`, so utf8.lua would still stop at its first library call once
+its escapes lex. `_G` is absent; nextvar reaches roughly line 259 before its
+global-environment assertions fail. The assertions before that line, covering
+`next`, length and table-size behavior, pass. That is the suite's strongest positive
+evidence for table semantics so far. closure waits for a weak-table
 entry to disappear and times out. A bounded probe retained the entry after
 explicit collection and two million allocation iterations.
 
@@ -34,11 +38,11 @@ The rows are a map of related findings, not a priority order.
 |---|---|---|
 | Diagnostics | The runner reports the first failure per file and guards a total pass floor. | Named passing files would expose regressions hidden by a compensating gain elsewhere. First-error details and separate timeout reporting would make whole-file counts easier to interpret. Small reproductions isolate behaviors hidden by earlier failures. |
 | Environment and value behavior | `_G`, `rawequal` and string metatable behavior are missing. | Global environment identity affects nextvar. String method lookup and primitive getmetatable behavior affect strings and bwcoercion. Environment identity, raw equality and `s:sub(...)` are small independent probes. |
-| Pure standard library | String format/rep, patterns and packing functions are missing. | math and constructs reach formatting; pm and sort reach patterns; tpack reaches packing. Lua byte strings, patterns, captures and error behavior constrain compatibility. Filling an early API exposes later assertions; it does not predict a file pass. |
+| Pure standard library | String format/rep, patterns and packing functions are missing, and the `utf8` library is absent. | math and constructs reach formatting; pm and sort reach patterns; tpack reaches packing; utf8 reaches the `utf8` library after its escapes. Lua byte strings, patterns, captures and error behavior constrain compatibility. Filling an early API exposes later assertions; it does not predict a file pass. |
 | Dynamic loading and protected execution | load, xpcall and some coroutine operations are absent. | The compiler provides a possible basis for text loading. Environment/mode arguments and binary chunks involve API choices. Yields through callbacks and error handlers interact with execution semantics. |
 | Weak tables | The weak entry in the bounded probe survives collection; closure waits for that behavior. | Weak keys, weak values and ephemeron reachability interact with incremental collection. Cycles, resurrection, metatable mode changes and live entries distinguish correct reachability from simply clearing entries. |
 | Closing semantics | `<close>` prevents six suite files from compiling. | Scope exit, errors, return, coroutine close and yielding restrictions all affect the implementation. Syntax acceptance alone would not establish closing behavior. |
-| Extended UTF-8 and other semantics | Two files contain escapes above U+10FFFF that the lexer rejects. Stack/resource limits and GC options also differ or remain unresolved. | Lua's escape range requires byte encoding beyond Rust char values. Boundary/invalid-escape cases isolate the lexer issue. Resource and GC differences need separate probes. |
+| Extended UTF-8 and other semantics | Two files contain escapes above U+10FFFF that the lexer rejects. Stack/resource limits and GC options also differ or remain unresolved. | Lua's escape range requires byte encoding beyond Rust char values. Boundary/invalid-escape cases isolate the lexer issue. Resource and GC differences need separate probes. Unbounded metamethod recursion grows without a Lua "stack overflow" error; cstack covers that behavior. |
 | Host facilities | package, require, io, os and debug coverage is absent or limited. | The intended embedding surface determines which facilities make sense. Standalone CLI tests and ltests-dependent C API tests exercise additional capabilities. Their absence remains visible in the raw result. |
 
 ## Recovering the evidence
@@ -48,7 +52,11 @@ runner is `tests/lua_suite.rs`; it uses subprocess timeouts. COMPATIBILITY.md
 records API-level claims, and README.md records the whole-file baseline.
 Modified diagnostic scripts and reduced snippets from the investigation were
 exploratory; this document records their findings rather than promising a
-reproducible checked-in diagnostic suite.
+reproducible checked-in diagnostic suite. One diagnostic result is an artifact of
+the diagnostics: events hung only with supplied stub globals. After the file
+reassigns `_ENV`, the stubs' own global lookups recursed through it without
+bound. The unmodified run stops earlier, at `require "debug"`. So events does not
+show a third hang. What it does show is the recursion limit noted in the table.
 
 The family registry is `merelyllc.com/content/specs.toml`: spec `lua-5.4`, repo
 `piccolo-fork`. Its coverage command is `cargo run --bin authority -- specs` in
