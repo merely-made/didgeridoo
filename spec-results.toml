@@ -1,0 +1,8 @@
+# Counts the family spec registry reads (merelyllc.com content/specs.toml,
+# claim lua-5.4 / piccolo-fork, measured_from). tests/lua_suite.rs fails when
+# these disagree with a run; LUA_SUITE_RECORD=1 rewrites them.
+schema = "merely.spec-results/v1"
+
+[[result]]
+spec = "lua-5.4"
+measured = { on = "2026-10-18", scope = "official lua-5.4.9-tests, per file; all.lua excluded, files skipping themselves without ltests not counted as passes", files_all_pass = 1, files = 32 }

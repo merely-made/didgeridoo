@@ -12,12 +12,14 @@ use std::{
     io::{Read, Write},
     path::Path,
     process::{Command, Stdio},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use piccolo::{io, Closure, Executor, Lua};
 
 const SUITE_DIR: &str = "tests/lua-5.4-tests";
+/// The counts the family spec registry reads; set `LUA_SUITE_RECORD=1` to rewrite them.
+const RESULTS_FILE: &str = "spec-results.toml";
 const TIMEOUT: Duration = Duration::from_secs(20);
 const EXIT_FAIL: i32 = 1;
 const EXIT_CANNOT_LOAD: i32 = 2;
@@ -164,8 +166,50 @@ fn lua_suite_scripts() {
         files.len()
     );
 
+    check_recorded(pass, files.len());
     assert!(
         pass >= PASS_FLOOR,
         "lua suite regressed: {pass} files pass, floor is {PASS_FLOOR}"
     );
+}
+
+/// Keep `spec-results.toml` truthful: every test run either matches it or, with
+/// `LUA_SUITE_RECORD=1`, rewrites it with today's date.
+fn check_recorded(pass: usize, files: usize) {
+    let counts = format!("files_all_pass = {pass}, files = {files} }}");
+    let text = std::fs::read_to_string(RESULTS_FILE).expect("spec-results.toml is missing");
+    if std::env::var_os("LUA_SUITE_RECORD").is_some() {
+        let line = text
+            .lines()
+            .find(|line| line.starts_with("measured = "))
+            .expect("spec-results.toml has no measured line");
+        let scope = &line[line.find("scope = ").unwrap()..line.find(", files_all_pass").unwrap()];
+        let updated = format!("measured = {{ on = \"{}\", {scope}, {counts}", today());
+        std::fs::write(RESULTS_FILE, text.replace(line, &updated)).unwrap();
+    } else {
+        assert!(
+            text.contains(&counts),
+            "spec-results.toml disagrees with this run ({pass} of {files} files pass); \
+             rerun with LUA_SUITE_RECORD=1 to record it"
+        );
+    }
+}
+
+fn today() -> String {
+    let days = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64
+        / 86_400;
+    // Howard Hinnant's civil_from_days.
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02}")
 }
