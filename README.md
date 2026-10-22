@@ -279,7 +279,10 @@ are vendored unmodified and run by `cargo test --test lua_suite -- --nocapture`
 (also part of plain `cargo test`). `tests/lua_suite.rs` runs each file in its
 own process and reports `pass`, `fail`, `cannot-load` (does not compile), or
 `skipped` (exits cleanly only because it skips itself without the `ltests` C
-library). The test fails only if the pass count drops below `PASS_FLOOR`.
+library). The test fails if the pass count drops below `PASS_FLOOR`, or if
+`spec-results.toml` disagrees with the run. That file is what the family spec
+registry on merelyllc.com reads, so the site's count follows each commit;
+rerun with `LUA_SUITE_RECORD=1` to record a change.
 
 Measured 2026-10-18, per file (`all.lua`, the suite's own driver, is excluded):
 
