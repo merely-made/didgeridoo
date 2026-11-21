@@ -1,3 +1,11 @@
+## Unreleased (fork)
+
+* `rand` moves from 0.8 to 0.10. `math.random` and `math.randomseed` sit behind
+  the `random` feature, on by default; a host that wants repeatable scripts,
+  or a target with no entropy source, leaves it off.
+* `gc-arena` comes from `mark-ik/gc-arena`, the same revision with its derive on
+  syn 3 and synstructure 0.14.
+
 ## [0.3.3]
 * Bugfix to not reset live threads held in upvalues of dead threads.
 

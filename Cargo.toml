@@ -19,9 +19,11 @@ repository = "https://github.com/kyren/piccolo"
 ahash = "0.8"
 allocator-api2 = "0.2"
 anyhow = "1.0"
-gc-arena = { git = "https://github.com/kyren/gc-arena", rev = "5a7534b883b703f23cfb8c3cfdf033460aa77ea9", features = ["allocator-api2", "hashbrown"] }
+# The patch-only fork: upstream at the revision above the patch, with its derive
+# on syn 3 and synstructure 0.14, so a graph holds one synstructure.
+gc-arena = { git = "https://github.com/mark-ik/gc-arena", branch = "main", features = ["allocator-api2", "hashbrown"] }
 hashbrown = { version = "0.14", features = ["raw"] }
-rand = { version = "0.8", features = ["small_rng"] }
+rand = "0.10"
 serde = "1.0"
 thiserror = "1.0"
 
@@ -37,13 +39,19 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["random"]
+# `math.random` and `math.randomseed`, seeded from system entropy. A host that
+# wants repeatable scripts, or a target with no entropy source, leaves this off.
+random = ["dep:rand"]
+
 [dependencies]
 ahash.workspace = true
 allocator-api2.workspace = true
 anyhow.workspace = true
 gc-arena.workspace = true
 hashbrown.workspace = true
-rand.workspace = true
+rand = { workspace = true, optional = true }
 thiserror.workspace = true
 
 [dev-dependencies]
