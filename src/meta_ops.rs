@@ -1,13 +1,30 @@
 use std::io::Write;
 
-use gc_arena::Collect;
+use gc_arena::{Collect, Rootable};
 use thiserror::Error;
 
 use crate::async_callback::{AsyncSequence, Locals};
 use crate::{async_sequence, SequenceReturn, Stack};
 use crate::{
-    table::InvalidTableKey, Callback, CallbackReturn, Context, Function, IntoValue, Table, Value,
+    table::InvalidTableKey, Callback, CallbackReturn, Context, Function, IntoValue, Singleton,
+    Table, Value,
 };
+
+/// The metatable shared by every string value. It starts empty, and `load_string` sets its
+/// `__index` to the `string` table, so indexing a string looks the name up there.
+#[derive(Copy, Clone, Collect)]
+#[collect(no_drop)]
+pub(crate) struct StringMetatable<'gc>(pub Table<'gc>);
+
+impl<'gc> Singleton<'gc> for StringMetatable<'gc> {
+    fn create(ctx: Context<'gc>) -> Self {
+        Self(Table::new(&ctx))
+    }
+}
+
+pub(crate) fn string_metatable<'gc>(ctx: Context<'gc>) -> Table<'gc> {
+    ctx.singleton::<Rootable![StringMetatable<'_>]>().0
+}
 
 /// An enum of every possible Lua metamethod.
 ///
@@ -217,6 +234,23 @@ pub fn index<'gc>(
                 ));
             }
 
+            idx
+        }
+        Value::String(_) => {
+            let idx = string_metatable(ctx).get_value(ctx, MetaMethod::Index);
+            if idx.is_nil() {
+                return Err(MetaOperatorError::Unary(
+                    MetaMethod::Index,
+                    table.type_name(),
+                ));
+            }
+            // The common case, `s:name()` with `__index` the plain `string` table.
+            if let Value::Table(lib) = idx {
+                let v = lib.get_value(ctx, key);
+                if !v.is_nil() || lib.metatable().is_none() {
+                    return Ok(MetaResult::Value(v));
+                }
+            }
             idx
         }
         _ => {

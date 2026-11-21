@@ -97,6 +97,7 @@ pub fn load_string<'gc>(ctx: Context<'gc>) {
         }),
     );
 
+    crate::meta_ops::string_metatable(ctx).set_field(ctx, "__index", string);
     ctx.set_global("string", string);
 }
 
