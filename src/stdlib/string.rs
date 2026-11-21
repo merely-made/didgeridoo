@@ -1,4 +1,20 @@
-use crate::{Callback, CallbackReturn, Context, FromValue, String, Table, Value};
+use crate::{Callback, CallbackReturn, Context, FromValue, Fuel, IntoValue, String, Table, Value};
+
+mod format;
+mod numfmt;
+mod pattern;
+
+/// Bytes of string built or copied per unit of fuel.
+const BYTES_PER_FUEL: usize = 32;
+
+/// Longest string `rep` will build, so one call cannot exhaust the host's memory.
+const MAX_BUILT_STRING_BYTES: usize = 1 << 30;
+
+/// Charges the fuel for `bytes` of string work, at least one unit.
+fn charge_bytes(fuel: &mut Fuel, bytes: usize) {
+    let units = (bytes / BYTES_PER_FUEL + 1).min(i32::MAX as usize);
+    fuel.consume(units as i32);
+}
 
 pub fn load_string<'gc>(ctx: Context<'gc>) {
     let string = Table::new(&ctx);
@@ -93,6 +109,40 @@ pub fn load_string<'gc>(ctx: Context<'gc>) {
                     .collect::<Vec<_>>(),
             );
             stack.replace(ctx, uppered);
+            Ok(CallbackReturn::Return)
+        }),
+    );
+
+    string.set_field(ctx, "format", Callback::from_fn(&ctx, format::format_callback));
+
+    string.set_field(
+        ctx,
+        "rep",
+        Callback::from_fn(&ctx, |ctx, mut exec, mut stack| {
+            let (string, n, sep) = stack.consume::<(String, i64, Option<String>)>(ctx)?;
+            let sep = sep.map_or(&[][..], |s| s.as_bytes());
+            let unit = string.as_bytes();
+            if n <= 0 {
+                stack.replace(ctx, ctx.intern(b""));
+                return Ok(CallbackReturn::Return);
+            }
+            let n = usize::try_from(n).unwrap_or(usize::MAX);
+            let total = unit
+                .len()
+                .checked_add(sep.len())
+                .and_then(|piece| piece.checked_mul(n))
+                .map(|t| t - sep.len())
+                .filter(|&t| t <= MAX_BUILT_STRING_BYTES)
+                .ok_or_else(|| "resulting string too large".into_value(ctx))?;
+            charge_bytes(exec.fuel(), total);
+            let mut out = Vec::with_capacity(total);
+            for i in 0..n {
+                if i > 0 {
+                    out.extend_from_slice(sep);
+                }
+                out.extend_from_slice(unit);
+            }
+            stack.replace(ctx, ctx.intern(&out));
             Ok(CallbackReturn::Return)
         }),
     );
