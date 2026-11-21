@@ -92,16 +92,16 @@ likely not be implemented due to differences between piccolo and PUC-Lua.
 | 🔵   | `byte(s[, i, j])`                 |             |       |
 | 🔵   | `char(args...)`                   |             |       |
 | ⚫️️   | `dump(function[, strip])`         |             |       |
-| ⚫️️   | `find(s, pattern[, init, plain])` |             |       |
-| ⚫️️   | `format(formatstring, args...)`   |             |       |
-| ⚫️️   | `gmatch(s, pattern[, init])`      |             |       |
-| ⚫️️   | `gsub(s, pattern, repl[, n])`     |             |       |
+| 🟡   | `find(s, pattern[, init, plain])` | Pattern depth is capped at 200 pending backtracking points and one call at 32 million matcher steps (an error, as is Lua's own "pattern too complex"); the work is charged to fuel. |       |
+| 🟡   | `format(formatstring, args...)`   | No `%p`. `%s` of a float prints as the VM's own `tostring` does. |       |
+| 🟡   | `gmatch(s, pattern[, init])`      | Pattern depth is capped at 200 pending backtracking points and one call at 32 million matcher steps (an error, as is Lua's own "pattern too complex"); the work is charged to fuel. |       |
+| 🟡   | `gsub(s, pattern, repl[, n])`     | Pattern depth is capped at 200 pending backtracking points and one call at 32 million matcher steps (an error, as is Lua's own "pattern too complex"); the work is charged to fuel. Table and function replacements may yield. |       |
 | 🔵     | `len(s)`                          |             |       |
 | 🔵   | `lower(s)`                        |             |       |
-| ⚫️️   | `match(s, pattern[, init])`       |             |       |
+| 🟡   | `match(s, pattern[, init])`       | Pattern depth is capped at 200 pending backtracking points and one call at 32 million matcher steps (an error, as is Lua's own "pattern too complex"); the work is charged to fuel. |       |
 | ⚫️️   | `pack(fmt, values...)`            |             |       |
 | ⚫️️   | `packsize(fmt)`                   |             |       |
-| ⚫️️   | `rep(s, n[, sep])`                |             |       |
+| 🟡   | `rep(s, n[, sep])`                | Result limited to 1 GiB. |       |
 | 🔵   | `reverse(s)`                      |             |       |
 | 🔵   | `sub(s, i[, j])`                  |             |       |
 | ⚫️️   | `unpack(fmt, s[, pos])`           |             |       |

@@ -1,5 +1,6 @@
 use crate::{Callback, CallbackReturn, Context, FromValue, Fuel, IntoValue, String, Table, Value};
 
+mod find;
 mod format;
 mod numfmt;
 mod pattern;
@@ -113,7 +114,15 @@ pub fn load_string<'gc>(ctx: Context<'gc>) {
         }),
     );
 
-    string.set_field(ctx, "format", Callback::from_fn(&ctx, format::format_callback));
+    string.set_field(ctx, "find", Callback::from_fn(&ctx, find::find));
+    string.set_field(ctx, "match", Callback::from_fn(&ctx, find::match_));
+    string.set_field(ctx, "gmatch", Callback::from_fn(&ctx, find::gmatch));
+    string.set_field(ctx, "gsub", Callback::from_fn(&ctx, find::gsub));
+    string.set_field(
+        ctx,
+        "format",
+        Callback::from_fn(&ctx, format::format_callback),
+    );
 
     string.set_field(
         ctx,

@@ -5,6 +5,15 @@
   or a target with no entropy source, leaves it off.
 * `gc-arena` comes from `mark-ik/gc-arena`, the same revision with its derive on
   syn 3 and synstructure 0.14.
+* String library: string method lookup (`s:sub(1, 2)`; indexing a string reads
+  the `string` table), `string.rep`, `string.format` (`%d %i %u %c %x %X %o %e %E
+  %f %F %g %G %a %A %q %s %%`, with flags, width and precision; `%s` honours
+  `__tostring`), and the Lua 5.4 pattern functions `string.find`, `match`,
+  `gmatch` and `gsub`. The matcher has no native recursion; a call that takes
+  more than 32 million matcher steps fails with an error, a pattern with more
+  than 200 pending backtracking points fails with "pattern too complex", and
+  matcher work is charged to fuel. `pack`, `unpack`, `packsize`, `dump` and
+  `utf8` are still absent.
 
 ## [0.3.3]
 * Bugfix to not reset live threads held in upvalues of dead threads.

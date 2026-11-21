@@ -1,12 +1,14 @@
 //! `string.format`: parsing the format string, and laying out each conversion.
 
+use super::charge_bytes;
 use super::numfmt::{
     format_float, format_radix, format_signed, format_unsigned, hex_float, pad_text, Flags, Layout,
 };
-use super::charge_bytes;
 use crate::async_callback::SequenceReturn;
 use crate::{
-    async_sequence, meta_ops::{self, MetaResult}, CallbackReturn, Context, Error, Execution, Stack, Value,
+    async_sequence,
+    meta_ops::{self, MetaResult},
+    CallbackReturn, Context, Error, Execution, Stack, Value,
 };
 
 /// A conversion's `%s` precision at or beyond which a long string skips layout (Lua's own rule:
@@ -170,9 +172,8 @@ fn integer_arg<'gc>(ctx: Context<'gc>, v: Value<'gc>, arg: usize) -> Result<i64,
 }
 
 fn float_arg<'gc>(ctx: Context<'gc>, v: Value<'gc>, arg: usize) -> Result<f64, Error<'gc>> {
-    v.to_number().ok_or_else(|| {
-        arg_error(ctx, arg, &format!("number expected, got {}", type_name(v)))
-    })
+    v.to_number()
+        .ok_or_else(|| arg_error(ctx, arg, &format!("number expected, got {}", type_name(v))))
 }
 
 fn type_name(v: Value) -> &'static str {
@@ -301,7 +302,10 @@ pub fn format_callback<'gc>(
     let pieces = parse(fmt.as_bytes()).map_err(|m| error(ctx, m))?;
     let mut pending = Vec::new();
     for piece in &pieces {
-        if let Piece::Conv { conv: b's', arg, .. } = piece {
+        if let Piece::Conv {
+            conv: b's', arg, ..
+        } = piece
+        {
             if *arg >= stack.len() {
                 return Err(arg_error(ctx, *arg, "no value"));
             }

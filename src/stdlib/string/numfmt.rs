@@ -104,7 +104,11 @@ pub fn format_float(layout: &Layout, conv: u8, x: f64) -> String {
     let abs = x.abs();
     if !abs.is_finite() {
         let text = if abs.is_nan() { "nan" } else { "inf" };
-        let text = if upper { text.to_uppercase() } else { text.to_string() };
+        let text = if upper {
+            text.to_uppercase()
+        } else {
+            text.to_string()
+        };
         return pad(layout, lead, &text, false);
     }
     let hash = layout.flags.hash;

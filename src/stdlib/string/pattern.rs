@@ -91,6 +91,11 @@ impl<'a> Matcher<'a> {
         self.steps
     }
 
+    /// Returns the steps taken so far and starts counting again from zero.
+    pub fn take_steps(&mut self) -> u64 {
+        std::mem::take(&mut self.steps)
+    }
+
     /// Adds work done outside the matcher proper (such as a plain search) to the step count.
     pub fn tick(&mut self, n: u64) -> Res<()> {
         self.steps = self.steps.saturating_add(n);
@@ -113,7 +118,10 @@ impl<'a> Matcher<'a> {
             return if i == 0 {
                 Ok(CaptureValue::Span(s, e))
             } else {
-                Err(PatternError::new(format!("invalid capture index %{}", i + 1)))
+                Err(PatternError::new(format!(
+                    "invalid capture index %{}",
+                    i + 1
+                )))
             };
         }
         let cap = self.caps[i];
@@ -190,11 +198,7 @@ impl<'a> Matcher<'a> {
                 }
                 Some(Frame::Lazy { item, ep, s }) => {
                     if self.single_match(s, item, ep) {
-                        self.frames.push(Frame::Lazy {
-                            item,
-                            ep,
-                            s: s + 1,
-                        });
+                        self.frames.push(Frame::Lazy { item, ep, s: s + 1 });
                         return Ok(Some((ep + 1, s + 1)));
                     }
                 }
@@ -299,7 +303,10 @@ impl<'a> Matcher<'a> {
     fn back_reference(&mut self, p: usize, s: usize, digit: u8) -> Res<Step> {
         let l = digit as isize - b'1' as isize;
         if l < 0 || l as usize >= self.level || self.caps[l as usize].len == CAP_UNFINISHED {
-            return Err(PatternError::new(format!("invalid capture index %{}", l + 1)));
+            return Err(PatternError::new(format!(
+                "invalid capture index %{}",
+                l + 1
+            )));
         }
         let cap = self.caps[l as usize];
         if cap.len == CAP_POSITION || self.src.len() - s < cap.len {
