@@ -234,8 +234,12 @@ pub fn render<'gc>(
     pieces: &[Piece],
     stack: &Stack<'gc, '_>,
 ) -> Result<Vec<u8>, Error<'gc>> {
+    let max = ctx.max_string_bytes();
     let mut out = Vec::new();
     for piece in pieces {
+        if out.len() > max {
+            break;
+        }
         let (conv, layout, arg) = match piece {
             Piece::Lit(bytes) => {
                 out.extend_from_slice(bytes);
@@ -284,6 +288,9 @@ pub fn render<'gc>(
                 }
             }
         }
+    }
+    if out.len() > max {
+        return Err(super::too_large(ctx));
     }
     Ok(out)
 }

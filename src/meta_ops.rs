@@ -792,6 +792,9 @@ pub fn concat<'gc>(
     lhs: Value<'gc>,
     rhs: Value<'gc>,
 ) -> Result<MetaResult<'gc, 2>, MetaOperatorError> {
+    if lhs.is_implicit_string() && rhs.is_implicit_string() {
+        check_concatenated_len(ctx, estimate_concatenated_len(&[lhs, rhs])?)?;
+    }
     meta_metaop(ctx, lhs, rhs, MetaMethod::Concat, |ctx, a, b| {
         if a.is_implicit_string() && b.is_implicit_string() {
             let mut bytes = Vec::new();
@@ -831,6 +834,17 @@ fn estimate_concatenated_len<'gc>(
     Ok(Some(len))
 }
 
+/// Refuses a concatenation longer than the state's string limit.
+fn check_concatenated_len<'gc>(
+    ctx: Context<'gc>,
+    len: Option<usize>,
+) -> Result<(), MetaOperatorError> {
+    match len {
+        Some(len) if len > ctx.max_string_bytes() => Err(MetaOperatorError::ConcatOverflow),
+        _ => Ok(()),
+    }
+}
+
 pub fn concat_many<'gc>(
     ctx: Context<'gc>,
     values: &[Value<'gc>],
@@ -843,6 +857,7 @@ pub fn concat_many<'gc>(
         let Some(len) = estimate_concatenated_len(values)? else {
             break;
         };
+        check_concatenated_len(ctx, Some(len))?;
 
         let mut bytes = Vec::with_capacity(len);
         for value in values {
@@ -904,6 +919,7 @@ pub fn concat_separated<'gc>(
             .checked_mul(sep_str.len() as usize)
             .and_then(|l| l.checked_add(len))
             .ok_or(MetaOperatorError::ConcatOverflow)?;
+        check_concatenated_len(ctx, Some(total_len))?;
 
         // Should this be allocated in-place in the GC heap?
         let mut bytes = Vec::with_capacity(total_len);

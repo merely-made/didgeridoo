@@ -14,6 +14,11 @@
   than 200 pending backtracking points fails with "pattern too complex", and
   matcher work is charged to fuel. `pack`, `unpack`, `packsize`, `dump` and
   `utf8` are still absent.
+* A state carries a string limit, `Context::max_string_bytes`, 1 GiB
+  (`DEFAULT_MAX_STRING_BYTES`) until the embedder calls
+  `set_max_string_bytes`. `..`, `string.rep`, `string.format`,
+  `string.gsub` and `table.concat` refuse a longer result with an error a
+  script can catch. Strings the embedder interns itself are not checked.
 
 ## [0.3.3]
 * Bugfix to not reset live threads held in upvalues of dead threads.

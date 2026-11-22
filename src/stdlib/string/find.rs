@@ -250,6 +250,7 @@ pub fn gsub<'gc>(
         Replacement::Text(text) => text,
         other => return gsub_with_lua(ctx, s, p, other, max_n, anchored),
     };
+    let max = ctx.max_string_bytes();
     let mut m = Matcher::new(src, pat);
     let mut out = Vec::with_capacity(src.len());
     let mut count = 0u64;
@@ -273,6 +274,9 @@ pub fn gsub<'gc>(
                 }
                 _ => break,
             }
+            if out.len() > max {
+                return Err(super::too_large(ctx));
+            }
             if anchored {
                 break;
             }
@@ -283,6 +287,9 @@ pub fn gsub<'gc>(
     super::charge_bytes(exec.fuel(), out.len());
     run?;
     out.extend_from_slice(&src[at..]);
+    if out.len() > max {
+        return Err(super::too_large(ctx));
+    }
     stack.replace(ctx, (ctx.intern(&out), count as i64));
     Ok(CallbackReturn::Return)
 }
@@ -355,6 +362,7 @@ fn gsub_with_lua<'gc>(
     max_n: u64,
     anchored: bool,
 ) -> Result<CallbackReturn<'gc>, Error<'gc>> {
+    let max = ctx.max_string_bytes();
     let seq = async_sequence(&ctx, |locals, mut seq| {
         let src = s.as_bytes().to_vec();
         let pat = p.as_bytes().to_vec();
@@ -414,6 +422,9 @@ fn gsub_with_lua<'gc>(
                     }
                     _ => break,
                 }
+                if out.len() > max {
+                    seq.try_enter(|ctx, _, _, _| Err::<(), _>(super::too_large(ctx)))?;
+                }
                 if anchored {
                     break;
                 }
@@ -422,6 +433,9 @@ fn gsub_with_lua<'gc>(
                 }
             }
             out.extend_from_slice(&src[at.min(src.len())..]);
+            if out.len() > max {
+                seq.try_enter(|ctx, _, _, _| Err::<(), _>(super::too_large(ctx)))?;
+            }
             seq.enter(|ctx, _, mut exec, mut stack| {
                 charge_steps(exec.fuel(), m.take_steps());
                 super::charge_bytes(exec.fuel(), out.len());

@@ -8,8 +8,10 @@ mod pattern;
 /// Bytes of string built or copied per unit of fuel.
 const BYTES_PER_FUEL: usize = 32;
 
-/// Longest string `rep` will build, so one call cannot exhaust the host's memory.
-const MAX_BUILT_STRING_BYTES: usize = 1 << 30;
+/// The error for a result longer than [`Context::max_string_bytes`].
+fn too_large<'gc>(ctx: Context<'gc>) -> crate::Error<'gc> {
+    "resulting string too large".into_value(ctx).into()
+}
 
 /// Charges the fuel for `bytes` of string work, at least one unit.
 fn charge_bytes(fuel: &mut Fuel, bytes: usize) {
@@ -141,8 +143,8 @@ pub fn load_string<'gc>(ctx: Context<'gc>) {
                 .checked_add(sep.len())
                 .and_then(|piece| piece.checked_mul(n))
                 .map(|t| t - sep.len())
-                .filter(|&t| t <= MAX_BUILT_STRING_BYTES)
-                .ok_or_else(|| "resulting string too large".into_value(ctx))?;
+                .filter(|&t| t <= ctx.max_string_bytes())
+                .ok_or_else(|| too_large(ctx))?;
             charge_bytes(exec.fuel(), total);
             let mut out = Vec::with_capacity(total);
             for i in 0..n {

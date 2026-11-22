@@ -101,7 +101,7 @@ likely not be implemented due to differences between piccolo and PUC-Lua.
 | 🟡   | `match(s, pattern[, init])`       | Pattern depth is capped at 200 pending backtracking points and one call at 32 million matcher steps (an error, as is Lua's own "pattern too complex"); the work is charged to fuel. |       |
 | ⚫️️   | `pack(fmt, values...)`            |             |       |
 | ⚫️️   | `packsize(fmt)`                   |             |       |
-| 🟡   | `rep(s, n[, sep])`                | Result limited to 1 GiB. |       |
+| 🟡   | `rep(s, n[, sep])`                | Result limited to the state's string limit (`Context::set_max_string_bytes`, 1 GiB unless set), as are `..`, `format`, `gsub` and `table.concat`. |       |
 | 🔵   | `reverse(s)`                      |             |       |
 | 🔵   | `sub(s, i[, j])`                  |             |       |
 | ⚫️️   | `unpack(fmt, s[, pos])`           |             |       |

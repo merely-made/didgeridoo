@@ -35,7 +35,7 @@ pub use self::{
     error::{Error, ExternError, RuntimeError, TypeError},
     fuel::Fuel,
     function::Function,
-    lua::{Context, Lua},
+    lua::{Context, Lua, DEFAULT_MAX_STRING_BYTES},
     meta_ops::MetaMethod,
     registry::{Registry, Singleton},
     stack::Stack,

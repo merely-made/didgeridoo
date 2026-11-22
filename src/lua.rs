@@ -2,8 +2,9 @@ use std::ops;
 
 use gc_arena::{
     arena::{CollectionPhase, Root},
+    lock::Lock,
     metrics::Metrics,
-    Arena, Collect, Mutation, Rootable,
+    Arena, Collect, Gc, Mutation, Rootable,
 };
 
 use crate::{
@@ -15,6 +16,9 @@ use crate::{
     Error, ExternError, FromMultiValue, FromValue, Fuel, IntoValue, Registry, RuntimeError,
     Singleton, StashedExecutor, String, Table, TypeError, Value,
 };
+
+/// The longest string a script may build until the embedder says otherwise.
+pub const DEFAULT_MAX_STRING_BYTES: usize = 1 << 30;
 
 /// A value representing the main "execution context" of a Lua state.
 ///
@@ -70,6 +74,17 @@ impl<'gc> Context<'gc> {
 
     pub fn finalizers(self) -> Finalizers<'gc> {
         self.state.finalizers
+    }
+
+    /// The longest string, in bytes, a script may build with `..`, `string.rep`,
+    /// `string.format`, `string.gsub` or `table.concat`. A longer result is an error.
+    pub fn max_string_bytes(self) -> usize {
+        self.state.max_string_bytes.get()
+    }
+
+    /// Sets [`Context::max_string_bytes`]. Strings the embedder interns itself are not checked.
+    pub fn set_max_string_bytes(self, bytes: usize) {
+        self.state.max_string_bytes.set(&self, bytes);
     }
 
     // Calls `ctx.globals().get(key)`
@@ -298,6 +313,7 @@ struct State<'gc> {
     registry: Registry<'gc>,
     strings: InternedStringSet<'gc>,
     finalizers: Finalizers<'gc>,
+    max_string_bytes: Gc<'gc, Lock<usize>>,
 }
 
 impl<'gc> State<'gc> {
@@ -307,6 +323,7 @@ impl<'gc> State<'gc> {
             registry: Registry::new(mc),
             strings: InternedStringSet::new(mc),
             finalizers: Finalizers::new(mc),
+            max_string_bytes: Gc::new(mc, Lock::new(DEFAULT_MAX_STRING_BYTES)),
         }
     }
 
