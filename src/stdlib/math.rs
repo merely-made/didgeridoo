@@ -223,15 +223,15 @@ pub fn load_float<'gc>(ctx: Context<'gc>, math: Table<'gc>) {
     math.set_field(
         ctx,
         "exp",
-        callback("exp", &ctx, |_, v: f64| Some(f64::exp(v))),
+        callback("exp", &ctx, |_, v: f64| Some(libm::exp(v))),
     );
 
     math.set_field(
         ctx,
         "log",
         callback("log", &ctx, |_, (v, base): (f64, Option<f64>)| match base {
-            None => Some(v.ln()),
-            Some(base) => Some(v.log(base)),
+            None => Some(libm::log(v)),
+            Some(base) => Some(log_to_base(v, base)),
         }),
     );
 
@@ -257,17 +257,30 @@ pub fn load_float<'gc>(ctx: Context<'gc>, math: Table<'gc>) {
     );
 }
 
+/// `math.log(v, base)` as Lua 5.4 computes it: bases 2 and 10 have their own functions.
+fn log_to_base(v: f64, base: f64) -> f64 {
+    const BINARY: f64 = 2.0;
+    const DECIMAL: f64 = 10.0;
+    if base == BINARY {
+        libm::log2(v)
+    } else if base == DECIMAL {
+        libm::log10(v)
+    } else {
+        libm::log(v) / libm::log(base)
+    }
+}
+
 pub fn load_trig<'gc>(ctx: Context<'gc>, math: Table<'gc>) {
     math.set_field(
         ctx,
         "acos",
-        callback("acos", &ctx, |_, v: f64| Some(v.acos())),
+        callback("acos", &ctx, |_, v: f64| Some(libm::acos(v))),
     );
 
     math.set_field(
         ctx,
         "asin",
-        callback("asin", &ctx, |_, v: f64| Some(v.asin())),
+        callback("asin", &ctx, |_, v: f64| Some(libm::asin(v))),
     );
 
     math.set_field(
@@ -275,18 +288,30 @@ pub fn load_trig<'gc>(ctx: Context<'gc>, math: Table<'gc>) {
         "atan",
         callback("atan", &ctx, |_, (a, b): (f64, Option<f64>)| {
             Some(if let Some(b) = b {
-                a.atan2(b)
+                libm::atan2(a, b)
             } else {
-                a.atan()
+                libm::atan(a)
             })
         }),
     );
 
-    math.set_field(ctx, "cos", callback("cos", &ctx, |_, v: f64| Some(v.cos())));
+    math.set_field(
+        ctx,
+        "cos",
+        callback("cos", &ctx, |_, v: f64| Some(libm::cos(v))),
+    );
 
-    math.set_field(ctx, "sin", callback("sin", &ctx, |_, v: f64| Some(v.sin())));
+    math.set_field(
+        ctx,
+        "sin",
+        callback("sin", &ctx, |_, v: f64| Some(libm::sin(v))),
+    );
 
-    math.set_field(ctx, "tan", callback("tan", &ctx, |_, v: f64| Some(v.tan())));
+    math.set_field(
+        ctx,
+        "tan",
+        callback("tan", &ctx, |_, v: f64| Some(libm::tan(v))),
+    );
 }
 
 #[cfg(feature = "random")]

@@ -23,6 +23,8 @@ anyhow = "1.0"
 # on syn 3 and synstructure 0.14, so a graph holds one synstructure.
 gc-arena = { git = "https://github.com/mark-ik/gc-arena", branch = "main", features = ["allocator-api2", "hashbrown"] }
 hashbrown = { version = "0.14", features = ["raw"] }
+# Float maths with the same bits on every target; see CHANGELOG.
+libm = "0.2"
 rand = "0.10"
 serde = "1.0"
 thiserror = "1.0"
@@ -51,6 +53,7 @@ allocator-api2.workspace = true
 anyhow.workspace = true
 gc-arena.workspace = true
 hashbrown.workspace = true
+libm.workspace = true
 rand = { workspace = true, optional = true }
 thiserror.workspace = true
 

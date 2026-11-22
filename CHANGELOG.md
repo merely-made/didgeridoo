@@ -14,6 +14,11 @@
   than 200 pending backtracking points fails with "pattern too complex", and
   matcher work is charged to fuel. `pack`, `unpack`, `packsize`, `dump` and
   `utf8` are still absent.
+* Float maths is libm's: `^` and `math.exp`, `log`, `sin`, `cos`, `tan`, `asin`,
+  `acos` and `atan` call the `libm` crate, not the platform's C library, so a
+  script computes the same bits on every target. The two differ by one unit in
+  the last place in up to a tenth of results. `math.log(x, 2)` and
+  `math.log(x, 10)` use `log2` and `log10`, as Lua 5.4 does.
 * A state carries a string limit, `Context::max_string_bytes`, 1 GiB
   (`DEFAULT_MAX_STRING_BYTES`) until the embedder calls
   `set_max_string_bytes`. `..`, `string.rep`, `string.format`,
