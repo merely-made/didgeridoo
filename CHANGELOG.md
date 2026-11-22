@@ -19,6 +19,8 @@
   script computes the same bits on every target. The two differ by one unit in
   the last place in up to a tenth of results. `math.log(x, 2)` and
   `math.log(x, 10)` use `log2` and `log10`, as Lua 5.4 does.
+* `utf8.len(s [, i [, j]])` counts characters, where `#s` counts bytes; it is the
+  `utf8` library's only function so far, and has no `lax` argument.
 * A state carries a string limit, `Context::max_string_bytes`, 1 GiB
   (`DEFAULT_MAX_STRING_BYTES`) until the embedder calls
   `set_max_string_bytes`. `..`, `string.rep`, `string.format`,
