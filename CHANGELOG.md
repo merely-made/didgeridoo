@@ -1,5 +1,13 @@
 ## Unreleased (fork)
 
+* `table.sort` and `table.move` compile on first use. Each state registers native
+  placeholders under both names; the first call compiles the Lua source, replaces
+  the placeholder in the `table` table (unless the script has already replaced it)
+  and calls the compiled function. A state that never sorts or moves skips the
+  compile: `Lua::core()` drops from about 220 us to about 24 us. `pairs(table)`,
+  `rawget` and `type` see a function under both names throughout; behaviour is
+  otherwise the same.
+
 * `piccolo::drive` steps an executor under `DriveLimits` (a fuel budget, `None`
   for none, and a heap ceiling in bytes) and returns the fuel spent, or a
   `DriveError`: `OutOfFuel`, `OverHeap` or `Runtime`. It spends fuel in slices

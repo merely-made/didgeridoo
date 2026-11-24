@@ -2,7 +2,7 @@ use std::mem;
 use std::pin::Pin;
 
 use anyhow::Context as _;
-use gc_arena::Collect;
+use gc_arena::{barrier, lock::Lock, Collect, Gc};
 
 use crate::{
     async_callback::{AsyncSequence, Locals},
@@ -109,15 +109,69 @@ pub fn load_table<'gc>(ctx: Context<'gc>) {
 
     table.set_field(ctx, "insert", Callback::from_fn(&ctx, table_insert_impl));
 
-    let data = include_str!("table/sort.lua");
-    let func = Closure::load(ctx, Some("table/sort.lua"), data.as_bytes()).unwrap();
-    table.set_field(ctx, "sort", func);
-
-    let data = include_str!("table/move.lua");
-    let func = Closure::load(ctx, Some("table/move.lua"), data.as_bytes()).unwrap();
-    table.set_field(ctx, "move", func);
+    lazy_lua(ctx, table, "sort", "table/sort.lua", include_str!("table/sort.lua"));
+    lazy_lua(ctx, table, "move", "table/move.lua", include_str!("table/move.lua"));
 
     ctx.set_global("table", table);
+}
+
+#[derive(Collect)]
+#[collect(no_drop)]
+struct LazyLua<'gc> {
+    table: Table<'gc>,
+    // The placeholder itself, so a user's own replacement is never overwritten.
+    me: Lock<Option<Callback<'gc>>>,
+    compiled: Lock<Option<Function<'gc>>>,
+}
+
+// Registers a native placeholder under `name` that compiles `src` on its first call,
+// replaces itself in `table` and tail-calls the compiled function.
+fn lazy_lua<'gc>(
+    ctx: Context<'gc>,
+    table: Table<'gc>,
+    name: &'static str,
+    chunk: &'static str,
+    src: &'static str,
+) {
+    let lazy = Gc::new(
+        &ctx,
+        LazyLua {
+            table,
+            me: Lock::new(None),
+            compiled: Lock::new(None),
+        },
+    );
+    let cb = Callback::from_fn_with(&ctx, lazy, move |lazy, ctx, _, _| {
+        // A stashed placeholder reuses the first compilation.
+        let func: Function<'gc> = match lazy.compiled.get() {
+            Some(f) => f,
+            None => {
+                let f: Function<'gc> = Closure::load(ctx, Some(chunk), src.as_bytes())
+                    .unwrap()
+                    .into();
+                barrier::field!(Gc::write(&ctx, *lazy), LazyLua, compiled)
+                    .unlock()
+                    .set(Some(f));
+                f
+            }
+        };
+        let key = name.into_value(ctx);
+        if let (Value::Function(Function::Callback(cur)), Some(me)) =
+            (lazy.table.get_raw(key), lazy.me.get())
+        {
+            if cur == me {
+                let _ = lazy.table.set_raw(&ctx, key, Value::Function(func));
+            }
+        }
+        Ok(CallbackReturn::Call {
+            function: func,
+            then: None,
+        })
+    });
+    barrier::field!(Gc::write(&ctx, lazy), LazyLua, me)
+        .unlock()
+        .set(Some(cb));
+    table.set_field(ctx, name, cb);
 }
 
 fn prep_metaop_call<'gc, const N: usize>(
