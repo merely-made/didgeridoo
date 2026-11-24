@@ -1,5 +1,6 @@
 pub mod any;
 pub mod async_callback;
+pub mod bounded;
 pub mod callback;
 pub mod closure;
 pub mod compiler;
@@ -26,6 +27,7 @@ pub mod userdata;
 pub mod value;
 
 pub use self::{
+    bounded::{drive, DriveError, DriveLimits},
     async_callback::{async_sequence, SequenceReturn},
     callback::{BoxSequence, Callback, CallbackFn, CallbackReturn, Sequence, SequencePoll},
     closure::{Closure, CompilerError, FunctionPrototype},

@@ -1,5 +1,10 @@
 ## Unreleased (fork)
 
+* `piccolo::drive` steps an executor under `DriveLimits` (a fuel budget, `None`
+  for none, and a heap ceiling in bytes) and returns the fuel spent, or a
+  `DriveError`: `OutOfFuel`, `OverHeap` or `Runtime`. It spends fuel in slices
+  of 4,096, so the collector runs between them. The heap ceiling is the host's
+  to choose; there is no default.
 * `rand` moves from 0.8 to 0.10. `math.random` and `math.randomseed` sit behind
   the `random` feature, on by default; a host that wants repeatable scripts,
   or a target with no entropy source, leaves it off.
